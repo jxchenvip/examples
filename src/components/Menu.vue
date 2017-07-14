@@ -1,5 +1,6 @@
 <template>
     <div class="menu">
+        <a href="http://blog.ccaixx.com">Blog</a>
         <router-link v-for="item in menus" :key="item" :to="item.link">{{item.text}}</router-link>
     </div>
 </template>
