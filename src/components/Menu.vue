@@ -1,10 +1,15 @@
 <template>
-    <div class="menu">
-        <a href="http://blog.ccaixx.com">Blog</a>
-        <router-link v-for="item in menus" :key="item" :to="item.link">{{item.text}}</router-link>
+    <div :style="styles">
+        <div ref="menu" class="menu">
+            <a href="http://blog.ccaixx.com">Blog</a>
+            <router-link v-for="item in menus" :key="item" :to="item.link">{{item.text}}</router-link>
+        </div>
     </div>
 </template>
 <script>
+import {
+    bus
+} from '@/store/bus.js'
 import data from '@/datas/files.json'
 
 const menus = [{
@@ -24,31 +29,49 @@ export default {
     data() {
         return {
             activeIndex: this.$route.fullPath,
+            menuHeight: 0,
             menus: menus
         };
     },
-    computed: {},
+    mounted() {
+        this.scrollHandler();
+        window.addEventListener('resize', this.scrollHandler.bind(this), false)
+    },
+    computed: {
+        styles() {
+            return {
+                height: this.menuHeight
+            }
+        }
+    },
     methods: {
-        handleSelect(key, keyPath) {
-            // console.log(key, keyPath);
+        scrollHandler() {
+            var mheight = this.$refs.menu.offsetHeight;
+            this.menuHeight = `${mheight}px`;
+            bus.$emit('menuHeight', {
+                menuHeight: mheight,
+                iframeHeight: window.innerHeight - mheight
+            });
         }
     }
 }
 </script>
 <style>
 .menu {
+    font-size: 14px;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 9999;
-    padding: 20px 10px;
+    padding: 15px 10px;
     background-color: #324157;
 }
 
 .menu a {
+    display: inline-block;
     color: #bfcbd9;
-    margin: 0 10px;
+    margin: 5px 10px;
     text-decoration: none;
 }
 

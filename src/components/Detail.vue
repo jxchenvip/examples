@@ -5,8 +5,14 @@
     </div>
 </template>
 <script>
-import json from '@/datas/files.json'
-const datas = json.list;
+import {
+    bus
+} from '@/store/bus.js'
+var iframeHeight = 0;
+
+bus.$on('menuHeight', function(hs) {
+    iframeHeight = hs.iframeHeight;
+})
 
 export default {
     name: 'Detail',
@@ -17,21 +23,24 @@ export default {
             loadingShow: true
         }
     },
-    mounted() {
-        console.log(this.$route.params)
-    },
-    watch: {
-        iframeHeight() {
-            this.iframeHeight = this.setIframeHeight();
+    computed: {
+        newIframeHeight() {
+            return iframeHeight;
         }
+    },
+    mounted() {
+        this.iframeHeight = iframeHeight - 4;
+        console.log(this.iframeHeight)
     },
     methods: {
         iframeLoad() {
-            this.iframeHeight = this.setIframeHeight();
             this.loadingShow = false;
+            this.iframeHeight = this.setIframeHeight();
         },
         setIframeHeight() {
-            return this.$refs.examples.contentDocument.body.scrollHeight;
+            var ih = this.iframeHeight,
+                wh = this.$refs.examples.contentDocument.body.scrollHeight;
+            return Math.max(ih, wh);
         }
     }
 }
