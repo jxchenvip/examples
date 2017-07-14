@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <style type="text/css">
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    
+    html,
+    body {
+        font-size: 0;
+        overflow: hidden;
+        background: #fff;
+        text-align: center;
+    }
+    </style>
+</head>
+
+<body>
+    <canvas id="cvs"></canvas>
+    <script type="text/javascript" src="./hidpi-canvas.min.js"></script>
+    <script type="text/javascript" src="./tween.js"></script>
+    <script type="text/javascript" src="./a.js"></script>
+    <script type="text/javascript">
+    // var C = (function() {
+    //     var Plugin, Shape, cavnas, context, config,  Text, {
+    //         PI,
+    //         sin,
+    //         cos,
+    //         min,
+    //         max,
+    //         random,
+    //         floor
+    //     } = Math;
+
+
+    //     Plugin = function(options) {
+    //         this.storage = [];
+    //         this.defaults = {
+    //             maxShapes: 9,
+    //             texts: ['轩亦辰', '247', '万', '预测投资'],
+    //             sizeVariations: 3,
+    //             speed: 0.5,
+    //             color: '#000000',
+    //             minDistance: 120,
+    //             connectParticles: false
+    //         };
+
+    //         this.init = function(options) {
+    //             window.addEventListener('resize', this.resize.bind(this), false);
+
+    //             if (options === undefined || !options.selector) {
+    //                 console.warn('particles.js: No selector is specified! Check https://github.com/marcbruederlin/particles.js#options');
+    //                 return false;
+    //             }
+
+    //             config = _mergeObjects(this.defaults, options);
+
+    //             // Setup the canvas
+    //             canvas = document.querySelector(config.selector);
+    //             context = canvas.getContext('2d');
+
+    //             // Set the canvas dimensions
+    //             canvas.width = window.innerWidth;
+    //             canvas.height = window.innerHeight;
+
+    //             var points = this.createPoints(3, 3, canvas.width, canvas.height);
+    //             for (var i = 0; i < config.maxShapes; i++) {
+    //                 // console.log(`x: ${i%3} y: ${Math.floor(i/3)}`);
+    //                 this.storage.push(new Shape(points[i]));
+
+    //             }
+
+    //             this.draw();
+
+
+    //         }
+
+    //         this.createPoints = function(row = 0, col = 0, w = 0, h = 0) {
+    //             var points = [];
+    //             for (var i = 0; i < row; i++) {
+    //                 for (var j = 0; j < col; j++) {
+    //                     points.push({
+    //                         x: j * w / row,
+    //                         y: i * h / row,
+    //                         w: (j + 1) * w / row,
+    //                         h: (i + 1) * h / col
+    //                     });
+    //                 }
+    //             }
+    //             return points;
+    //         };
+
+    //         this.animate = function() {
+    //             this.draw();
+    //             window.requestAnimFrame(this.animate.bind(this));
+    //         };
+
+    //         this.draw = function() {
+    //             context.clearRect(0, 0, canvas.width, canvas.height);
+
+    //             var r = Math.min(canvas.width / 2, canvas.height / 2)
+    //             context.beginPath();
+    //             context.arc(canvas.width / 2, canvas.height / 2, r, 0, 2 * PI);
+    //             context.stroke();
+    //             context.closePath();
+
+    //             for (var i = this.storage.length; i--;) {
+    //                 var shape = this.storage[i];
+    //                 shape.draw();
+    //             }
+
+    //         };
+
+    //         this.resize = function() {
+    //             canvas.width = window.innerWidth;
+    //             canvas.heigh = window.innerHeight;
+
+    //             this.draw();
+    //         }
+    //     }
+
+
+    //     function _mergeObjects(source, obj) {
+    //         Object.keys(obj).forEach(function(key) {
+    //             source[key] = obj[key];
+    //         });
+    //         return source;
+    //     }
+
+
+    //     Shape = function(p, color) {
+    //         p = p || {
+    //             x: 0,
+    //             y: 0,
+    //             w: 0,
+    //             h: 0
+    //         };
+    //         this.points = [];
+    //         this.copies = 6;
+    //         this.color = color || '#967444';
+    //         this.radius = 45;
+    //         this.x = min(max(p.x + this.radius, random() * p.w), p.w - this.radius);
+    //         this.y = min(max(p.y + this.radius, random() * p.h), p.h - this.radius);
+
+    //         this.cx = this.x - canvas.width / 2;
+    //         this.cy = this.y - canvas.height / 2;
+
+    //         for (var i = 0; i <= this.copies; i++) {
+    //             var angle = d2a(i * 360 / this.copies + 30);
+    //             this.points.push({
+    //                 x: this.cx - this.radius * cos(angle),
+    //                 y: this.cy - this.radius * sin(angle)
+    //             });
+    //         }
+    //     }
+
+    //     Shape.prototype.draw = function() {
+    //         context.save();
+    //         context.translate(canvas.width / 2, canvas.height / 2);
+    //         this.createShape();
+    //         // this.createText();
+    //         this.createTextTwo();
+    //         context.restore();
+    //     }
+
+    //     Shape.prototype.createShape = function() {
+    //         context.beginPath();
+    //         context.strokeStyle = this.color;
+    //         context.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    //         context.moveTo(this.points[0].x, this.points[0].y);
+    //         for (var i = 1, len = this.points.length; i < len; i++) {
+    //             var point = this.points[i];
+    //             context.lineTo(point.x, point.y);
+    //         }
+    //         context.fill();
+    //         context.stroke();
+    //         context.closePath();
+    //     }
+
+
+    //     Text = function(x, y) {
+    //         this.x = x;
+    //         this.y = y;
+    //     }
+
+    //     Text.prototype.draw = function() {
+            
+    //     }
+
+    //     Shape.prototype.createText = function() {
+    //         var money = 9999;
+    //         var unit = '万';
+    //         context.font = "18px Georgia";
+    //         var w1 = context.measureText(money).width / 2;
+
+    //         context.beginPath();
+    //         context.textAlign = 'center';
+    //         context.textBaseline = 'middle';
+    //         context.font = "8px Georgia";
+    //         context.fillStyle = this.color;
+    //         context.fillText('轩亦辰', this.cx, this.cy - 20);
+    //         context.fillText('预测投资', this.cx, this.cy + 20);
+    //         context.font = "10px Georgia";
+    //         var w = context.measureText(unit).width / 2;
+    //         context.fillText(unit, this.cx + w1 + 2, this.cy);
+    //         context.font = "20px Georgia";
+    //         context.fillText(money, this.cx - w - 2, this.cy - 5);
+    //         context.closePath();
+
+    //         context.beginPath();
+    //         context.moveTo(this.cx - this.radius / 1.5, this.cy + 10);
+    //         context.lineTo(this.cx + this.radius / 1.5, this.cy + 10);
+    //         context.stroke();
+    //         context.closePath();
+
+    //     }
+
+
+    //     Shape.prototype.createTextTwo = function() {
+    //         context.beginPath();
+    //         context.textAlign = 'center';
+    //         context.textBaseline = 'middle';
+    //         context.font = "8px Georgia";
+    //         context.fillStyle = '#c54444';
+    //         context.fillText('谢婧媛', this.cx, this.cy - 10);
+    //         context.fillText('潜在流失', this.cx, this.cy + 10);
+    //         context.closePath();
+
+
+    //         context.beginPath();
+    //         context.strokeStyle = '#c54444'
+    //         context.moveTo(this.cx - this.radius / 1.5, this.cy);
+    //         context.moveTo(this.cx - this.radius / 1.5, this.cy);
+    //         context.lineTo(this.cx + this.radius / 1.5, this.cy);
+    //         context.stroke();
+    //         context.closePath();
+    //     }
+
+
+    //     function d2a(n) {
+    //         return PI / 180 * n;
+    //     }
+
+
+    //     window.requestAnimFrame = (function() {
+    //         return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame ||
+    //             function(callback) {
+    //                 window.setTimeout(callback, 1000 / 60);
+    //             };
+    //     })();
+
+    //     return new Plugin();
+    // })();
+
+    // C.init({
+    //     selector: '#cvs'
+    // })
+    </script>
+</body>
+
+</html>

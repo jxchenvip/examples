@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>倒计时</title>
+    <style>
+    .cTimeBox {
+        margin: 20px;
+    }
+    
+    em,
+    span {
+        font-size: 16px;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="cTimeBox">
+        <h1>2016/01/01 00:00:00距2046/01/01 00:00:00</h1>
+        <div id="countdown" class="countdown" stime="2016/01/01 00:00:00" etime="2046/01/01 00:00:00">
+            <!-- <em>1</em>
+        <em>1</em>
+        <span>时</span>
+        <em>1</em>
+        <em>1</em>
+        <span>分</span>
+        <em>1</em>
+        <em>1</em>
+        <span>秒</span> -->
+        </div>
+    </div>
+    <script>
+    /**
+     * [CountDown 倒计时]
+     * @param {[Object]} wrap    [id]
+     * @param {[Object]} options [默认参数]
+     * @example <div id="wrap" time="100"></div> // 倒计时100秒 or 1000000000000
+     * @example <div id="wrap" stime="2016/03/25 09:00:00" etime="2016/03/25 09:01:00"></div> // 倒计时1分钟
+     * @default-param counting callback 倒计时中 返回参数 clock{MM:00, D:00, H:00, M:00, S:00}
+     * @default-param end callback 倒计结束 无返回参数
+     * @default-param type type 1:clock{MM:0, D:0, H:0, M:0, S:0} 2:clock{MM:00, D:00, H:00, M:00, S:00}
+     * @method stop 倒计时停止
+     * @method start 倒计是开始
+     * @method push 倒计时暂停
+     */
+    function CountDown(wrap, options) {
+        this.wrap = (typeof wrap === 'string') ? document.getElementById(wrap) : wrap;
+        if (!this.wrap) return false;
+        options = options || {};
+        this.counting = options.counting || function() {}; // 计时中
+        this.end = options.end || function() {}; // 计时结束
+        this.type = options.type || 2; // 1：小于10显示1位，2：大于10前位补0
+        this.init(); // 初始化
+    }
+
+    /**
+     * [getTime 获取对象上的time,stime,etime, 统一格式化为时间戳精确到秒]
+     * @return {[Date]} [时间戳]
+     */
+    CountDown.prototype.getTime = function() {
+        var stime = this.wrap.getAttribute('stime');
+        var etime = this.wrap.getAttribute('etime');
+        var time = this.wrap.getAttribute('time');
+        var newtime = 0;
+        var formarTime = function(times) {
+            if (!times) return 0;
+            if (times.indexOf('/') != -1) {
+                times = times.match(/\d+/g);
+                var date = new Date();
+                date.setFullYear(parseInt(times[0]), parseInt(times[1]) - 1, parseInt(times[2]));
+                date.setHours(parseInt(times[3]), parseInt(times[4]), parseInt(times[5]));
+                return date.getTime();
+            }
+        }
+
+        if (stime && etime) {
+            newtime = parseInt((formarTime(etime) - formarTime(stime)) / 1000);
+        }
+
+        if (time) {
+            newtime = parseInt(time);
+        }
+        return newtime;
+    }
+
+    /**
+     * [toDouble 小于10前位补0]
+     * @param  {[Number]} num [传入数字]
+     * @return {[Number]}     [格式化的数字]
+     */
+    CountDown.prototype.toDouble = function(num) {
+        return (num < 10) ? ('0' + num) : ('' + num)
+    }
+
+    /**
+     * [stop 倒计时结束]
+     */
+    CountDown.prototype.stop = function() {
+        if (this.__timer) {
+            clearTimeout(this.__timer);
+            this.__timer = null;
+            this.time = this.getTime();
+            this.clock = {
+                MM: 0,
+                D: 0,
+                H: 0,
+                M: 0,
+                S: 0
+            }
+        }
+    }
+
+    /**
+     * [push 倒计时暂停]
+     */
+    CountDown.prototype.push = function() {
+        if (this.__timer) {
+            clearTimeout(this.__timer);
+        }
+    }
+
+    /**
+     * [start 倒计是开始]
+     */
+    CountDown.prototype.start = function() {
+        var self = this;
+        this.__timer = setTimeout(function() {
+            self.nextFrame();
+        }, 1000);
+    }
+
+    /**
+     * [nextFrame 进入下一秒]
+     */
+    CountDown.prototype.nextFrame = function() {
+        if (this.time == 0) {
+            clearTimeout(this.__timer);
+            this.end.call(this);
+        } else {
+            this.time--;
+
+            this.clock.MM = Math.floor(this.time / 86400 / 30);
+            this.clock.D = Math.floor(this.time / 86400);
+            this.clock.H = Math.floor((this.time - this.clock.D * 86400) / 3600);
+            this.clock.M = Math.floor((this.time - this.clock.D * 86400 - this.clock.H * 3600) / 60);
+            this.clock.S = Math.floor(this.time - this.clock.D * 86400 - this.clock.H * 3600 - this.clock.M * 60);
+
+            if (this.type == 2) {
+                for (var i in this.clock) {
+                    this.clock[i] = this.toDouble(this.clock[i]);
+                }
+            }
+
+            this.counting.call(this, this.clock);
+            this.start();
+        }
+    }
+
+    /**
+     * [init 初始化]
+     */
+    CountDown.prototype.init = function() {
+        this.time = this.getTime();
+        this.__timer = null;
+        this.clock = {
+            MM: 0,
+            D: 0,
+            H: 0,
+            M: 0,
+            S: 0
+        };
+        this.start();
+    }
+
+
+
+    /**
+     * [g 添加em]
+     * @param  {[String]} s [字符串]
+     */
+    function g(s) {
+        s = s || '';
+        return s.replace(/\d/g, function(d) {
+            return '<em>' + d + '</em>';
+        })
+    }
+    var tim = new CountDown('countdown', {
+        counting: function(clock) {
+            var shtml = [];
+            shtml.push(g(clock.MM));
+            shtml.push('<span>月</span>');
+            shtml.push(g(clock.H));
+            shtml.push('<span>时</span>');
+            shtml.push(g(clock.M));
+            shtml.push('<span>分</span>');
+            shtml.push(g(clock.S));
+            shtml.push('<span>秒</span>');
+            this.wrap.innerHTML = shtml.join(' ');
+        }
+    });
+    </script>
+</body>
+
+</html>

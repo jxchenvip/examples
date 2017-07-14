@@ -1,0 +1,442 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Document</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    
+    body {
+        text-align: center;
+        font-size: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    input,
+    button {
+        width: 100px;
+        height: 50px;
+        padding: 5px;
+        margin: 5px;
+        vertical-align: middle;
+    }
+    
+    .colors {
+        display: -webkit-box;
+        display: -moz-box;
+        display: box;
+    }
+    
+    .colors span {
+        display: block;
+        height: 88px;
+        -webkit-box-flex: 1;
+        -moz-box-flex: 1;
+        box-flex: 1;
+    }
+    
+    .aimgs {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+    }
+    
+    .aimgs img {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -webkit-transform: translate(-50%, -50%);
+        -ms-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+    }
+    </style>
+</head>
+
+<body>
+    <p>
+        <button id="clearCanvas">清空</button>
+        <button id="getImg">生成图片</button>
+    </p>
+    <div id="colors" class="colors">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <!-- <canvas id="cvs"></canvas> -->
+    <div id="aimgs" class="aimgs"></div>
+    <script src="../common/hidpi-canvas.min.js"></script>
+    <script>
+    var STAGE_WIDTH = Math.min(window.innerWidth, window.innerHeight); // 设置canva宽高
+    var LINE_WIDTH = 10; // 米字格外边框
+    var LINE_WIDTH_HALF = LINE_WIDTH * 0.5;
+
+    var clearButton = document.getElementById('clearCanvas'); // 清空按钮
+    var aImgs = document.getElementById('aimgs'); // 图片集合
+    var oColors = document.getElementById('colors'); // 颜色
+    var getImg = document.getElementById('getImg'); // 生成图片
+
+    var cvs = document.createElement('canvas'); // canvas 元素
+    cvs.setAttribute('width', STAGE_WIDTH);
+    cvs.setAttribute('height', STAGE_WIDTH);
+    cvs.setAttribute('id', 'cvs');
+    document.body.appendChild(cvs);
+
+    var ctx = cvs.getContext('2d');
+    var isMouseDown = false; // 鼠标是否按下
+    var lastLoc = { // 上一次鼠标位置
+        x: 0,
+        y: 0
+    };
+    var aColors = ['red', 'yellow', 'green', 'pink', 'brown', 'purple', 'black'];
+    var maxLineWidth = 30; // 线条最大宽度
+    var minLineWidth = 1; // 线条最小亮度
+    var maxVelocity = 20; // 最大速度
+    var minVelocity = 0.1; // 最小速度
+    var ratioLineWidth = 0.15; // 0-1
+    var lastTime = Date.now(); // 时间戳
+    var lastLineWidth = -1; // 上一次线条宽度
+    var penColor = '#ff6600';
+
+    var getPixelRatio = function(context) {
+        var backingStore = context.backingStorePixelRatio ||
+            context.webkitBackingStorePixelRatio ||
+            context.mozBackingStorePixelRatio ||
+            context.msBackingStorePixelRatio ||
+            context.oBackingStorePixelRatio ||
+            context.backingStorePixelRatio || 1;
+        return (window.devicePixelRatio || 1) / backingStore;
+    };
+
+    var ratio = getPixelRatio(ctx);
+    var W = cvs.width / ratio;
+    var H = cvs.height / ratio;
+
+    /**
+     * [setColors 设置颜色]
+     * @param {[Array]} colors [颜色数组]
+     */
+    function setColors(colors) {
+        var aSpan = oColors.getElementsByTagName('span');
+        for (var i = 0; i < aSpan.length; i++) {
+            aSpan[i].style.backgroundColor = colors[i];
+            spanAddEvent(aSpan[i]);
+        }
+    }
+
+    /**
+     * [spanAddEvent 添加选择颜色事件]
+     * @param  {[Object]} obj [点击对象]
+     */
+    function spanAddEvent(obj) {
+        obj.addEventListener('click', function() {
+            penColor = this.style.backgroundColor;
+        })
+    }
+
+    setColors(aColors);
+
+    /**
+     * [drawDashedLine 画虚线]
+     * @param  {[Object]} ctx          [context]
+     * @param  {[Object]} p1           [起点]
+     * @param  {[Object]} p2           [终点]
+     * @param  {[Number]} dashedLength [虚线长度]
+     */
+    function drawDashedLine(ctx, p1, p2, dashedLength) {
+        var s = calcDistance(p1, p2);
+        var f = Math.round(s / dashedLength) || 1;
+        var a = (p1.x - p2.x) / f;
+        var b = (p1.y - p2.y) / f;
+        ctx.beginPath();
+        for (var i = 0; i < f; i++) ctx[i % 2 == 0 ? 'moveTo' : 'lineTo'](p1.x - i * a, p1.y - i * b);
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+
+    /**
+     * [drawBackground 米字格背景]
+     */
+    function drawBackground() {
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fill();
+        ctx.lineWidth = LINE_WIDTH;
+        ctx.strokeStyle = '#f60';
+        ctx.moveTo(0, LINE_WIDTH_HALF);
+        ctx.lineTo(W - LINE_WIDTH_HALF, LINE_WIDTH_HALF);
+        ctx.lineTo(W - LINE_WIDTH_HALF, H - LINE_WIDTH_HALF);
+        ctx.lineTo(LINE_WIDTH_HALF, H - LINE_WIDTH_HALF);
+        ctx.lineTo(LINE_WIDTH_HALF, 0);
+        ctx.stroke();
+        ctx.lineWidth = LINE_WIDTH * 0.2;
+        // ctx.moveTo(0, 0);
+        // ctx.lineTo(cvs.width/ratio, cvs.height/ratio);
+        // ctx.moveTo(cvs.width/ratio, 0);
+        // ctx.lineTo(0, cvs.height/ratio);
+        // ctx.moveTo(0, cvs.height/ratio / 2);
+        // ctx.lineTo(cvs.width/ratio, cvs.height/ratio / 2);
+        // ctx.moveTo(cvs.width/ratio / 2, 0);
+        // ctx.lineTo(cvs.width/ratio / 2, cvs.height/ratio);
+        // ctx.stroke();
+        // ctx.closePath();
+        drawDashedLine(ctx, {
+            x: 0,
+            y: 0
+        }, {
+            x: W,
+            y: H
+        }, 10);
+        drawDashedLine(ctx, {
+            x: 0,
+            y: H / 2
+        }, {
+            x: W,
+            y: H / 2
+        }, 10);
+        drawDashedLine(ctx, {
+            x: 0,
+            y: H
+        }, {
+            x: W,
+            y: 0
+        }, 10);
+        drawDashedLine(ctx, {
+            x: W / 2,
+            y: 0
+        }, {
+            x: W / 2,
+            y: H
+        }, 10);
+        ctx.restore();
+    }
+
+
+    /**
+     * [windowToCanvas 在canvas上的点]
+     * @param  {[Number]} x [x坐标]
+     * @param  {[Number]} y [y坐标]
+     */
+    function windowToCanvas(x, y) {
+        var box = cvs.getBoundingClientRect();
+        return {
+            x: x - box.left,
+            y: y - box.top
+        }
+    }
+
+    /**
+     * [calcDistance 两点之间的距离]
+     * @param  {[Object]} p1 [坐标点1]
+     * @param  {[Object]} p2 [坐标点2]
+     */
+    function calcDistance(p1, p2) {
+        var a = (p1.x - p2.x);
+        var b = (p1.y - p2.y);
+        return Math.sqrt(a * a + b * b);
+    }
+
+    /**
+     * [caclLineWidth 计算触笔的宽度]
+     * @param  {[Number]} s [距离]
+     * @param  {[Number]} t [时间]
+     */
+    function caclLineWidth(s, t) {
+        var v = s / t || 1;
+        var lineWidth = 0;
+        if (v <= minVelocity) {
+            lineWidth = maxLineWidth;
+        } else if (v > maxVelocity) {
+            lineWidth = minLineWidth;
+        } else {
+            lineWidth = maxLineWidth - (v - minVelocity) / (10 - minVelocity) * (maxLineWidth - minLineWidth);
+        }
+        if (lastLineWidth == -1) {
+            return lineWidth;
+        }
+        return lastLineWidth * (1 - ratioLineWidth) + lineWidth * ratioLineWidth;
+    }
+
+    /**
+     * [beginStroke 开始填充]
+     * @param  {[Object]} p [坐标点]
+     */
+    function beginStroke(p) {
+        lastLoc = windowToCanvas(p.x, p.y);
+        lastTime = Date.now();
+    }
+
+    /**
+     * [strokeMove 填充过程]
+     * @param  {[Object]} p [坐标点]
+     */
+    function strokeMove(p) {
+        var loc = windowToCanvas(p.x, p.y);
+        var s = calcDistance(loc, lastLoc);
+        var t = Date.now() - lastTime;
+        var curLineWidth = caclLineWidth(s, t);
+        // s = vt
+        ctx.lineWidth = curLineWidth;
+        ctx.beginPath();
+        // ctx.lineWidth = 30;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = penColor;
+        ctx.moveTo(lastLoc.x, lastLoc.y);
+        ctx.lineTo(loc.x, loc.y);
+        ctx.stroke();
+        lastLoc = loc;
+        lastLineWidth = curLineWidth;
+        lastTime = Date.now();
+    }
+
+    /**
+     * [strokeEnd 填充结束]
+     * @param  {[Object]} e [Event]
+     */
+    function strokeEnd(e) {
+        e.preventDefault();
+        isMouseDown = false;
+        ctx.closePath();
+    }
+
+    /**
+     * [onCanvasDown 鼠标按下]
+     * @param  {[Object]} e [Event]
+     */
+    function onCanvasDown(e) {
+        e.preventDefault();
+        isMouseDown = true;
+        beginStroke({
+            x: e.clientX,
+            y: e.clientY
+        });
+    }
+
+    /**
+     * [onCanvasDown 鼠标移动]
+     * @param  {[Object]} e [Event]
+     */
+    function onCanvasMove(e) {
+        e.preventDefault();
+        if (!isMouseDown) return false;
+        strokeMove({
+            x: e.clientX,
+            y: e.clientY
+        });
+    }
+
+    /**
+     * [onCanvasDown 鼠标抬起]
+     * @param  {[Object]} e [Event]
+     */
+    function onCanvasUp(e) {
+        strokeEnd(e);
+    }
+
+    /**
+     * [onCanvasDown 鼠标离开canvas]
+     * @param  {[Object]} e [Event]
+     */
+    function onCanvasOut(e) {
+        strokeEnd(e);
+    }
+    drawBackground();
+    /** 绑定鼠标事件 */
+    cvs.addEventListener('mousedown', onCanvasDown); //
+    cvs.addEventListener('mousemove', onCanvasMove);
+    cvs.addEventListener('mouseup', onCanvasUp);
+    cvs.addEventListener('mouseout', onCanvasOut);
+
+
+    /**
+     * [onCanvasDown 手指按下]
+     * @param  {[Object]} e [Event]
+     */
+    function onTouchStart(e) {
+        e.preventDefault();
+        isMouseDown = true;
+        beginStroke({
+            x: e.touches[0].pageX,
+            y: e.touches[0].pageY
+        });
+    }
+
+    /**
+     * [onCanvasDown 手指移动]
+     * @param  {[Object]} e [Event]
+     */
+    function onTouchMove(e) {
+        e.preventDefault();
+        if (!isMouseDown) return false;
+        strokeMove({
+            x: e.touches[0].pageX,
+            y: e.touches[0].pageY
+        });
+    }
+
+    /**
+     * [onCanvasDown 手指抬起]
+     * @param  {[Object]} e [Event]
+     */
+    function onTouchEnd(e) {
+        strokeEnd(e);
+    }
+
+    /** 绑定触摸事件 */
+    cvs.addEventListener('touchstart', onTouchStart);
+    cvs.addEventListener('touchmove', onTouchMove);
+    cvs.addEventListener('touchend', onTouchEnd);
+
+    /**
+     * [initStage 还原写字板]
+     */
+    function initStage() {
+        ctx.clearRect(0, 0, W, H);
+        drawBackground();
+    }
+    clearButton.addEventListener('click', initStage);
+
+    /**
+     * [createImages 生成图片]
+     */
+    function createImages() {
+        var oImg = new Image();
+        oImg.src = cvs.toDataURL("image/png");
+        aImgs.appendChild(oImg);
+        aImgs.style.display = 'block';
+    }
+
+    getImg.addEventListener('click', createImages);
+
+    /**
+     * [description 闭关弹层] 
+     */
+    aImgs.addEventListener('click', function(e) {
+        if (e.target.nodeName == 'IMG') {
+            e.stopPropagation();
+            return false;
+        }
+        this.style.display = 'none';
+        this.innerHTML = '';
+    })
+    </script>
+</body>
+
+</html>

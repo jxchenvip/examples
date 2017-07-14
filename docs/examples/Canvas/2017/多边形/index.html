@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+    .side_wrap {
+        margin: 0 auto;
+        width: 320px;
+    }
+    
+    .side label {
+        width: 4em;
+    }
+    
+    .side * {
+        display: inline-block;
+        vertical-align: middle;
+        margin: 0 10px;
+    }
+    #polygon_range_side {
+        text-align: center;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="side_wrap">
+        <p class="side">
+            <label>stroke</label>
+            <input type="color" value="#000000" id="stroke"><span id="span_stroke"></span></p>
+        <p class="side">
+            <label>fill</label>
+            <input type="color" value="#FFFFFF" id="fill"><span id="span_fill"></span></p>
+        <p class="side">
+            <label>opacity</label>
+            <input type="range" min="0" step="0.1" max="1" value="1" id="opacity"><span id="span_opacity"></span></p>
+        <p class="side">
+            <label>rotate</label>
+            <input type="range" value="0" min="-360" max="360" step="10" id="rotate"><span id="span_rotate"></span></p>
+        <p class="side">
+            <label>side</label>
+            <input type="range" min="3" max="10" step="1" id="range_side" value="6"> <span id="span_side">6</span></p>
+    </div>
+    <div id="polygon_range_side"></div>
+    <script>
+    (function() {
+
+        // 不支持canvas
+        if (!document.createElement('canvas').getContext) return false;
+
+        /**
+         * [createCanvas 创建canvas元素]
+         * @return {[object]}
+         */
+        function createCanvas() {
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+            canvas.width = 100;
+            canvas.height = 100;
+            return context;
+        }
+
+        /**
+         * [$ 获取id]
+         * @param  {[String]} id
+         * @return {[object]} dom节点
+         */
+        function $(id) {
+            return document.getElementById(id);
+        }
+
+        /**
+         * [clear 清除画布]
+         * @param  {[object]} context
+         * @return {[void]}       
+         */
+        function clear(context) {
+            context.clearRect(0, 0, WIDTH, HEIGHT);
+        }
+
+        /**
+         * [createCanvasImage description]
+         * @param  {[object]} ele     [dom节点]
+         * @param  {[object]} context [画布]
+         * @return {[void]}
+         */
+        function createCanvasImage(ele, context) {
+            ele.innerHTML = "<img src=" + context.canvas.toDataURL() + " alt='' />";
+        }
+
+        /**
+         * [d2a 角度转弧度]
+         * @param  {[number]} n [角度]
+         * @return {[number]}   [弧度]
+         */
+        function d2a(n) {
+            return n * Math.PI / 180;
+        }
+
+        /**
+         * [side_points 各边顶点]
+         * @return {[array]} [顶点集合]
+         */
+        function side_points() {
+            var angle = 360 / SIDE,
+                points = [],
+                val = rotate.value * 1;
+            for (var i = 0; i <= SIDE; i++) {
+                var point = {};
+                point.x = Math.cos(d2a(angle * i + val)) * RADIUS + WIDTH / 2;
+                point.y = Math.sin(d2a(angle * i + val)) * RADIUS + HEIGHT / 2;
+                points.push(point);
+            }
+            return points;
+        }
+
+        /**
+         * [createSide 连接各顶点]
+         * @param  {[object]} context [画布]
+         * @return {[void]}
+         */
+        function lineToSide(context) {
+            var sides = side_points();
+            context.globalAlpha = opacity.value;
+            context.beginPath();
+            context.fillStyle = fill.value;
+            context.strokeStyle = stroke.value;
+            // context.moveTo(sides[0].x, sides[0].y);
+            sides.forEach(function(item) {
+                context.lineTo(item.x, item.y);
+            });
+            context.fill();
+            context.stroke();
+            context.closePath();
+        }
+
+        /**
+         * [onchange]
+         * @param  {[object]} context [画布]
+         * @return {[void]}
+         */
+        function onchange(context) {
+            SIDE = range_side.value;
+            span_side.innerText = SIDE;
+            span_opacity.innerText = opacity.value;
+            span_rotate.innerText = rotate.value;
+            span_fill.innerText = fill.value;
+            span_stroke.innerText = stroke.value;
+
+            clear(context);
+            lineToSide(context);
+            createCanvasImage(polygon_range_side, context);
+        }
+
+        function onchangeHandler() {
+            onchange(context);
+        }
+
+        // init
+        var span_rotate = $('span_rotate'), // 旋转
+            rotate = $('rotate'), // 旋转
+            span_opacity = $('span_opacity'), // 旋转
+            opacity = $('opacity'), // 透明
+            range_side = $('range_side'),
+            polygon_range_side = $('polygon_range_side'),
+            span_stroke = $('span_stroke'),
+            stroke = $('stroke'),
+            span_fill = $('span_fill'),
+            fill = $('fill'),
+            span_side = $('span_side'),
+            PI2 = Math.PI * 2,
+            LINE_WIDTH = 1,
+            SIDE = range_side.value,
+            context = createCanvas(),
+            WIDTH = context.canvas.width,
+            HEIGHT = context.canvas.height,
+            RADIUS = WIDTH / 2 - LINE_WIDTH;
+        
+        lineToSide(context);
+        onchangeHandler();
+        range_side.onchange = opacity.onchange = rotate.onchange = stroke.onchange = fill.onchange = onchangeHandler;
+    })();
+    </script>
+</body>
+
+</html>

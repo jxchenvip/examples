@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            text-align: center;
+            -webkit-text-size-adjust: none;
+            font-size: 9px;
+        }
+        
+        canvas {
+            /*border: 1px solid #f60;*/
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="cvs" style="width: 375px; height: 375px;" width="375" height="400"></canvas>
+    <script src="./hidpi-canvas.min.js"></script>
+    <script src="./bigBoard.js"></script>
+    <script src="./smallBoard.js"></script>
+    <script src="./tween.js"></script>
+    <script>
+        cvs.width = window.innerWidth;
+        cvs.height = window.innerWidth * 1.15;
+        cvs.style.width = window.innerWidth + 'px';
+        cvs.style.height = window.innerWidth * 1.15 + 'px';
+
+        function DataImage(canvas, options) {
+            // canvas #id .class canvas 
+            if (!canvas) return false;
+            options = options || {};
+            this.cvs = typeof canvas == 'string' ? document.querySelector(canvas) : canvas;
+            this.debug = options.debug || false;
+            this.noCanvasCallback = options.noCanvasCallback || function() {}; // 颜色
+        }
+        DataImage.prototype = {
+            // 获取devicePixelRatio
+            getPixelRatio: function(context) {
+                var backingStore = context.backingStorePixelRatio ||
+                    context.webkitBackingStorePixelRatio ||
+                    context.mozBackingStorePixelRatio ||
+                    context.msBackingStorePixelRatio ||
+                    context.oBackingStorePixelRatio ||
+                    context.backingStorePixelRatio || 1;
+                return (window.devicePixelRatio || 1) / backingStore;
+            },
+            // 角度转弧度
+            d2a: function(n) {
+                return n * Math.PI / 180;
+            },
+            a2d: function(n) {
+                return n * 180 / Math.PI;
+            },
+            //  随机数
+            rnd: function(iMin, iMax) {
+                return Math.floor(Math.random() * (iMax - iMin)) + iMin;
+            },
+            createBottomBackground: function() {
+                var R = this.R;
+                var gad = this.ctx.createLinearGradient(-R, -R, -R, R);
+                gad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                gad.addColorStop(0.1, 'rgba(255, 255, 255, 1)');
+                gad.addColorStop(1, '#9fa3ae');
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+
+                this.ctx.beginPath();
+                this.ctx.fillStyle = gad;
+                this.ctx.arc(0, 0, R, 0, this.d2a(360));
+                this.ctx.fill();
+                this.ctx.closePath();
+
+                this.ctx.beginPath();
+                this.ctx.fillStyle = '#fff';
+                this.ctx.arc(0, 0, R - 1, 0, this.d2a(360));
+                this.ctx.fill();
+                this.ctx.closePath();
+                this.ctx.restore();
+
+                for (var i = 0; i < 40; i++) {
+                    this.ctx.save();
+                    this.ctx.translate(this.center.x, this.center.y);
+                    this.ctx.rotate(this.d2a(-135 + i * 270 / 40));
+                    this.ctx.beginPath();
+                    this.ctx.fillStyle = '#eef0f2';
+                    // this.ctx.fillStyle = '#f60';
+                    if (i % 4 == 0 && i != 0) {
+                        this.ctx.rect(-5, -R + 1, 10, 14);
+                    } else {
+                        this.ctx.rect(-1, -R + 1, 2, 14);
+                    }
+                    this.ctx.fill();
+                    this.ctx.closePath();
+                    this.ctx.restore();
+                }
+            },
+            crateTexts: function() {
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                // this.ctx.rotate(this.d2a(-this.rotateText++));
+                this.texts.forEach(function(item, index) {
+                    var R = this.R - this.ctx.measureText(item.text).width / 5.5;
+                    this.ctx.save();
+                    this.ctx.rotate(this.d2a(item.rotate));
+                    this.ctx.scale(0.8, 0.8);
+                    this.ctx.fillStyle = '#7f869e';
+                    this.ctx.font = '12px SimSun';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    if (index >= 7) {
+                        this.ctx.fillText(item.text, R, 0);
+                    } else {
+                        this.ctx.fillText(item.text, -R, 0);
+                    }
+                    this.ctx.restore();
+                }.bind(this))
+                this.ctx.restore();
+            },
+            createCenterArc: function() {
+                var R = this.R * 0.6;
+                var last = 80;
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.rotate(this.d2a(this.rotate++));
+                this.rotate %= 360;
+                for (var i = 0; i < 3; i++) {
+                    this.ctx.save();
+                    this.ctx.rotate(0);
+                    this.ctx.beginPath();
+                    this.ctx.lineWidth = 8;
+                    this.ctx.strokeStyle = '#dfe1e5';
+                    this.ctx.arc(0, 0, R, this.d2a(last), this.d2a(last + 60));
+                    this.ctx.stroke();
+                    this.ctx.closePath();
+                    this.ctx.restore();
+                    last = last + 120;
+                }
+                this.ctx.beginPath();
+                this.ctx.lineWidth = .5;
+                this.ctx.strokeStyle = '#ebebee';
+                this.ctx.arc(0, 0, R - 5, 0, this.d2a(360));
+                this.ctx.stroke();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            createBoards: function() {
+                this.bigBoard.render(this.ctx);
+                this.smallBoardCenter.render(this.ctx);
+                this.smallBoardLeft.render(this.ctx);
+                this.smallBoardRight.render(this.ctx);
+            },
+            /** [render 渲染图层] */
+            render: function() {
+                this.ctx.clearRect(0, 0, this.CW, this.CH);
+                this.createBottomBackground();
+                this.crateTexts();
+                this.createCenterArc();
+                this.createBoards();
+            },
+            /** [loop 定时器] */
+            loop: function() {
+                var that = this;
+                (function loop() {
+                    if (that.update) {
+                        that.__frame++;
+                        that.render();
+                    }
+                    requestAnimationFrame(loop);
+                }());
+            },
+            init: function() {
+                if (!this.cvs) return false;
+                if (!this.cvs.getContext) {
+                    this.noCanvasCallback();
+                    return false;
+                }
+                this.CW = this.cvs.width; // canvas width
+                this.CH = this.cvs.height; // canvas height
+                this.ctx = this.cvs.getContext('2d'); // context
+                this.ratio = this.getPixelRatio(this.ctx); // devicePixelRatio
+                this.update = true;
+                this.R = this.CW / 2 * 0.95;
+                this.texts = [{
+                    text: '价格评估',
+                    rotate: -30
+                }, {
+                    text: '机构预测',
+                    rotate: -15
+                }, {
+                    text: '财务健康',
+                    rotate: 0
+                }, {
+                    text: '技术分析',
+                    rotate: 15
+                }, {
+                    text: '资金流向',
+                    rotate: 30
+                }, {
+                    text: '　关键字',
+                    rotate: 70
+                }, {
+                    text: '　情感值',
+                    rotate: 90
+                }, {
+                    text: '　热度　',
+                    rotate: -70
+
+                }, {
+                    text: '行业轮动',
+                    rotate: -20
+                }, {
+                    text: '行业板块',
+                    rotate: 0
+                }, {
+                    text: '机构预测',
+                    rotate: 20
+                }];
+
+                this.center = { // canvas 中心点
+                    x: this.CW / 2,
+                    y: this.CW / 2
+                };
+
+                this.rotate = 0;
+
+                // 中间大的进度
+                this.bigBoard = new BigBoard({
+                    radius: this.R * 0.52,
+                    copies: 24,
+                    lineWidth: 8,
+                    x: this.center.x,
+                    y: this.center.y,
+                    sAngle: 125,
+                    num: this.rnd(0, 10),
+                    text: '国泰君安',
+                    code: '601211'
+                });
+
+
+                // 中间大的进度
+                this.smallBoardCenter = new SmallBoard({
+                    radius: this.R / 4.5,
+                    copies: 20,
+                    innerColor: '#f75e46',
+                    x: this.center.x,
+                    y: this.center.y + this.R,
+                    sAngle: 125,
+                    num: this.rnd(0, 10),
+                    text: '舆情概念'
+                });
+
+                // 中间大的进度
+                this.smallBoardRight = new SmallBoard({
+                    radius: this.R / 4.5,
+                    copies: 20,
+                    innerColor: '#e60e1e',
+                    x: this.center.x + (this.R * Math.sin(this.d2a(42))),
+                    y: this.center.y + (this.R * Math.cos(this.d2a(42))),
+                    sAngle: 125,
+                    num: this.rnd(0, 10),
+                    text: '基本解读'
+                });
+
+                // 中间大的进度
+                this.smallBoardLeft = new SmallBoard({
+                    radius: this.R / 4.5,
+                    copies: 20,
+                    innerColor: '#3b4258',
+                    x: this.center.x + (this.R * Math.sin(this.d2a(-42))),
+                    y: this.center.y + (this.R * Math.cos(this.d2a(-42))),
+                    sAngle: 125,
+                    num: this.rnd(0, 10),
+                    text: '行业解读'
+                });
+
+                this.loop();
+
+                /** debug */
+                if (this.debug) {
+
+                }
+            }
+        }
+
+        var dataImage = new DataImage('#cvs', {
+            rotateType: 1
+        });
+
+        dataImage.init();
+    </script>
+</body>
+
+</html>

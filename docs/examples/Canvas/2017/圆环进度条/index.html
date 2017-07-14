@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Document</title>
+    <style>
+        body {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="cvs" width="200" height="200"></canvas>
+    <div id="box"></div>
+    <canvas id="cvs1" width="200" height="200"></canvas>
+    <div id="box1"></div>
+    <canvas id="cvs2" width="200" height="200"></canvas>
+    <div id="box2"></div>
+    <!--<script src="../common/requestNextAnimationFrame.js"></script>-->
+    <script src="../common/hidpi-canvas.min.js"></script>
+    <script>
+        (function() {
+            var vendors = ['webkit', 'moz'];
+            for (var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+                window.requestAnimationFrame = window[vendors[x] + 'RequestAnimationFrame'];
+                window.cancelAnimationFrame = window[vendors[x] + 'CancelAnimationFrame'] || // Webkit中此取消方法的名字变了
+                    window[vendors[x] + 'CancelRequestAnimationFrame'];
+            }
+
+            if (!window.requestAnimationFrame) {
+                window.requestAnimationFrame = function(callback, element) {
+                    var start,
+                        finish;
+                    var id = window.setTimeout(function() {
+                        start = Date.now();
+                        callback(start);
+                        finish = Date.now();
+                        self.timeout = 1000 / 60 - (finish - start);
+                    }, self.timeout);
+                    return id;
+                };
+            }
+            if (!window.cancelAnimationFrame) {
+                window.cancelAnimationFrame = function(id) {
+                    clearTimeout(id);
+                };
+            }
+        }());
+        var getPixelRatio = function(context) {
+            var backingStore = context.backingStorePixelRatio ||
+                context.webkitBackingStorePixelRatio ||
+                context.mozBackingStorePixelRatio ||
+                context.msBackingStorePixelRatio ||
+                context.oBackingStorePixelRatio ||
+                context.backingStorePixelRatio || 1;
+            return (window.devicePixelRatio || 1) / backingStore;
+        };
+
+
+        (function() {
+            function CircelProgress(canvas, options) {
+                this.canvas = (typeof canvas == 'string') ? document.getElementById(canvas) : canvas;
+                if (!this.canvas) return false;
+
+                /** @type {[type]} [默认参数] */
+                options = options || {};
+                this.support = options.support || this.canvas.getContext; // 是否支持canvas
+                this.onnotsupport = options.onnotsupport || function() {} // 不支持canvas
+                this.onprogress = options.onprogress || function() {}; // 进度条进行中
+                this.oncomplete = options.oncomplete || function() {}; // 进度完成
+                this.sAngle = options.sAngle || -90; // 起始角度
+                this.percent = options.percent || 0; // 百分比不带%
+                this.lineWidth = options.lineWidth || 10; // 进度条宽度
+                this.animateTime = options.animateTime || 50; // 动画时间
+                this.animateType = options.animateType || 'linear'; // 动画方式
+
+                /**
+                 * [if 不支持canvas]
+                 * @param  {[Object]} !this.support [是否支持canvas]
+                 * @return {[Blean]}               [是否支持canvas的结果]
+                 */
+                if (!this.support) {
+                    this.onnotsupport.call(this);
+                    return false;
+                }
+                this.topBarColor = ''; // 顶部进度条颜色
+                this.bottomBarColor = ''; // 底部进度条颜色
+                this.topCircelColor = ''; // 底部进度条颜色
+                this.ctx = this.canvas.getContext('2d'); // context 2d
+                this.ratio = getPixelRatio(this.ctx);
+                this.CX = this.canvas.width / 2 / this.ratio; // canvas 中心点x
+                this.CY = this.canvas.height / 2 / this.ratio; // canvas 中心点x
+                this.R = this.canvas.width / 2 / this.ratio - this.lineWidth * 1.5; // canvas 半径
+                this.__radius = this.sAngle; // 角度
+            }
+
+            /**
+             * [setBottomBarColor 设置底部圈颜色]
+             */
+            CircelProgress.prototype.setBottomBarColor = function() {
+                this.bottomBarColor = '#ccc';
+            }
+
+            /**
+             * [setTopBarColor 设置上部圈颜色]
+             */
+            CircelProgress.prototype.setTopBarColor = function() { // 设置topBarColor
+                var grad = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+                grad.addColorStop(0, '#ff6600');
+                grad.addColorStop(1, '#e2ca28');
+                this.topBarColor = grad;
+            }
+
+            /**
+             * [setTopBarColor 设置上部圈颜色]
+             */
+            CircelProgress.prototype.setTopCircelColor = function() { // 设置topBarColor
+                var grad = this.ctx.createLinearGradient(-this.canvas.width, -this.canvas.height, this.canvas.height, this.canvas.width);
+                grad.addColorStop(0, '#6414e9');
+                grad.addColorStop(1, '#14e982');
+                this.topCircelColor = grad;
+            }
+
+            /**
+             * [d2a 弧度转角度]
+             * @param  {[Number]} n [弧度]
+             * @return {[Number]}   [角度]
+             */
+            CircelProgress.prototype.d2a = function(n) {
+                return n * Math.PI / 180;
+            }
+
+            /**
+             * [Tween 运动函数]
+             */
+            CircelProgress.prototype.Tween = {
+                /*
+                 * t: current time（当前时间）
+                 * b: beginning value（初始值）
+                 * c: change in value（变化量）
+                 * d: duration（持续时间）
+                 */
+                linear: function(t, b, c, d) {
+                    return c * t / d + b;
+                },
+                bounce: function(t, b, c, d) {
+                    if ((t /= d) < (1 / 2.75)) {
+                        return c * (7.5625 * t * t) + b;
+                    } else if (t < (2 / 2.75)) {
+                        return c * (7.5625 * (t -= (1.5 / 2.75)) * t + .75) + b;
+                    } else if (t < (2.5 / 2.75)) {
+                        return c * (7.5625 * (t -= (2.25 / 2.75)) * t + .9375) + b;
+                    } else {
+                        return c * (7.5625 * (t -= (2.625 / 2.75)) * t + .984375) + b;
+                    }
+                }
+            }
+
+            /**
+             * [drawBottomBar 画底部circel]
+             * @param  {[Number]} eAngle      [角度]
+             * @param  {[String]} borderColor [bar 颜色]
+             */
+            CircelProgress.prototype.drawBottomBar = function(eAngle, borderColor) {
+                this.ctx.beginPath();
+                this.ctx.lineWidth = this.lineWidth;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.strokeStyle = borderColor;
+                this.ctx.arc(this.CX, this.CY, this.R, this.d2a(this.sAngle), this.d2a(this.sAngle + eAngle), false);
+                this.ctx.stroke();
+                this.ctx.closePath();
+            }
+
+            /**
+             * [n2p 数字转百分比]
+             * @param  {[Number]} n [转化前的数字]
+             * @return {[Number]}   [转化后的数字不带百分比]
+             */
+            CircelProgress.prototype.n2p = function(n) {
+                return Math.round(parseInt(n) / 360 * 100);
+            }
+
+            /**
+             * [p2n 百分比转数字]
+             * @param  {[Number]} n [转化前的百分比]
+             * @return {[Number]}   [转化后的数字]
+             */
+            CircelProgress.prototype.p2n = function(p) {
+                return Math.round(parseInt(p) / 100 * 360);
+            }
+
+
+            /**
+             * [drawCircel 进度条上的圆点]
+             * @param  {[Number]} r               [半径]
+             * @param  {[string]} backgroundColor [圆点颜色]
+             */
+            CircelProgress.prototype.drawCircel = function(r, backgroundColor) {
+                this.ctx.save();
+                this.ctx.beginPath();
+                this.ctx.shadowBlur = 4;
+                this.ctx.shadowColor = '#ccc';
+                this.ctx.lineWidth = 1;
+                this.ctx.fillStyle = backgroundColor;
+                this.ctx.translate(this.CX, this.CY);
+                this.ctx.rotate(this.d2a(this.__radius));
+                this.ctx.arc(this.R, 0, r, this.d2a(0), this.d2a(360));
+                this.ctx.fill();
+                this.ctx.closePath();
+                this.ctx.restore();
+            }
+
+            /**
+             * [drawBar 开始画进度]
+             * @param  {[type]} eAngle [description]
+             * @return {[type]}        [description]
+             */
+            CircelProgress.prototype.drawBar = function() {
+                var that = this;
+                var speed = 0; // 每帧速度
+                var frame = 0; // 第0帧
+                var sAngle = 0; // 起始点
+                that.animateTime += that.percent; // 超100%
+                var drawBar = function(animateType) {
+                    var newfs = Math.round(that.Tween[animateType](frame++, sAngle, that.p2n(that.percent) - sAngle, that.animateTime));
+                    that.__radius = newfs + that.sAngle;
+                    that.drawBottomBar(newfs, that.topBarColor);
+                    that.onprogress.call(that, that.n2p(newfs), that.__radius);
+                };
+
+                (function next() {
+                    if (that.animateTime < frame) {
+                        // clearTimeout(timer);
+                        cancelAnimationFrame(next);
+                        that.oncomplete.call(that);
+                    } else {
+                        that.ctx.clearRect(0, 0, that.canvas.width, that.canvas.height);
+                        that.drawBottomBar(360, that.bottomBarColor);
+                        switch (that.animateType) {
+                            case 'linear':
+                                drawBar('linear');
+                                break;
+                            case 'bounce':
+                                drawBar('bounce');
+                                break;
+                            default:
+                                drawBar('linear');
+                                break;
+                        }
+                        that.drawCircel(that.lineWidth * 1.2, that.topCircelColor);
+                        // timer = setTimeout(next, speed);
+                        requestAnimationFrame(next);
+                    }
+                })();
+            }
+
+            CircelProgress.prototype.init = function() {
+                this.setTopCircelColor();
+                this.setBottomBarColor();
+                this.setTopBarColor();
+                this.drawBar();
+
+            }
+
+            var pro = new CircelProgress('cvs', {
+                percent: 100,
+                onnotsupport: function() {
+                    document.body.removeChild(this.canvas);
+                },
+                onprogress: function(t) {
+                    box.innerHTML = t;
+                },
+                oncomplete: function(t) {}
+            });
+            pro.init();
+            var pro1 = new CircelProgress('cvs1', {
+                percent: 50,
+                animateType: 'bounce',
+                onnotsupport: function() {
+                    document.body.removeChild(this.canvas);
+                },
+                onprogress: function(t, deg) {
+                    box1.innerHTML = t;
+                },
+                oncomplete: function(t) {}
+            });
+            pro1.setTopCircelColor = function() {
+                this.topCircelColor = 'transparent';
+            }
+            pro1.init();
+
+            var pro2 = new CircelProgress('cvs2', {
+                percent: 10,
+                onnotsupport: function() {
+                    document.body.removeChild(this.canvas);
+                },
+                onprogress: function(t, deg) {
+                    box2.innerHTML = t;
+                },
+                oncomplete: function(t) {}
+            });
+
+            pro2.setBottomBarColor = function() {
+                this.bottomBarColor = '#d1d1d1';
+            }
+            pro2.setTopBarColor = function() {
+                this.topBarColor = '#22a6f1';
+            }
+            pro2.setTopCircelColor = function() {
+                this.topCircelColor = '#02659e';
+            }
+            pro2.init();
+        })();
+    </script>
+</body>
+
+</html>

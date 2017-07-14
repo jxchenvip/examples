@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>虚线</title>
+    <style>
+    body{ text-align: center; }
+    </style>
+</head>
+
+<body>
+    <h2>实线</h2>
+    <div id="line_move_to"></div>
+    <h2>虚线</h2>
+    <div id="line_dash_5"></div>
+    <h2>自定义虚线</h2>
+    <div id="define_dash"></div>
+    <script>
+    (function() {
+
+        // 不支持canvas
+        if (!document.createElement('canvas').getContext) return false;
+
+        /**
+         * [createCanvas 创建canvas元素]
+         * @return {[object]}
+         */
+        function createCanvas() {
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+            canvas.width = WIDTH;
+            canvas.height = HEIGHT;
+            return context;
+        }
+
+        /**
+         * [$ 获取id]
+         * @param  {[String]} id
+         * @return {[object]} dom节点
+         */
+        function $(id) {
+            return document.getElementById(id);
+        }
+
+        /**
+         * [clear 清除画布]
+         * @param  {[object]} context
+         * @return {[void]}       
+         */
+        function clear(context) {
+            context.clearRect(0, 0, WIDTH, HEIGHT);
+        }
+
+        /**
+         * [createCanvasImage description]
+         * @param  {[object]} ele     [dom节点]
+         * @param  {[object]} context [画布]
+         * @return {[void]}
+         */
+        function createCanvasImage(ele, context) {
+            var img = ele.getElementsByTagName('img')[0],
+                src = context.canvas.toDataURL();
+            if (img) {
+                var a = ele.getElementsByTagName('a')[0];
+                a && (a.href = src);
+                img.src = src;
+            } else {
+                ele.innerHTML = "<img src=" + src + " alt='' />";
+            }
+        }
+
+
+        /**
+         * [d2a 角度转弧度]
+         * @param  {[number]} n [角度]
+         * @return {[number]}   [弧度]
+         */
+        function d2a(n) {
+            return n * Math.PI / 180;
+        }
+
+        /**
+         * [getPoint 获取图形坐标点]
+         * @return {[array]} [坐标点集合]
+         */
+        function getPoint() {
+            var lastX = CX,
+                lastY = CY,
+                iscale = 10,
+                deg = 0,
+                points = [];
+
+            for (var i = 0; i < WIDTH - iscale; i += iscale) {
+                var a = d2a(deg += 90),
+                    x = Math.cos(a) * i + lastX,
+                    y = Math.sin(a) * i + lastY;
+                lastX = x;
+                lastY = y;
+                points.push({
+                    x: x,
+                    y: y
+                })
+            }
+            return points;
+        }
+
+        /**
+         * [base_draw_line 画线]
+         * @param  {Function} cb [回调]
+         */
+        function base_draw_line(cb) {
+            context.beginPath();
+            typeof cb === "function" && cb(context);
+            context.moveTo(points[0].x, points[0].y);
+            points.forEach(function(item) {
+                context.lineTo(item.x, item.y);
+            })
+            context.stroke();
+            context.closePath();
+        }
+
+        // init
+        var WIDTH = 200,
+            HEIGHT = 200,
+            CX = WIDTH / 2,
+            CY = HEIGHT / 2,
+            context = createCanvas(),
+            line_dash_5 = $('line_dash_5'),
+            line_move_to = $('line_move_to'),
+            j = 0,
+            points = getPoint();
+
+        clear(context);
+
+        /*******实线********/
+        base_draw_line();
+        createCanvasImage(line_move_to, context);
+        /*******************/
+
+        /*******虚线********/
+        function next() {
+            clear(context);
+            base_draw_line(function(c) {
+                c.setLineDash([10, 2]);
+                c.lineDashOffset = j += 10;
+            });
+            setTimeout(next, 30);
+        }
+        next();
+        line_dash_5.appendChild(context.canvas);
+        /*******************/
+
+
+        // 自定义虚线
+        ({
+            /**
+             * [calcDistance 两点之间的距离]
+             * @param  {[Object]} p1 [坐标点1]
+             * @param  {[Object]} p2 [坐标点2]
+             */
+            calcDistance: function(p1, p2) {
+                var a = (p1.x - p2.x),
+                    b = (p1.y - p2.y);
+                return Math.sqrt(a * a + b * b);
+            },
+
+            /**
+             * [drawDashedLine 画虚线]
+             * @param  {[Object]} ctx          [context]
+             * @param  {[Object]} p1           [起点]
+             * @param  {[Object]} p2           [终点]
+             * @param  {[Number]} dashedLength [虚线长度]
+             */
+            drawDashedLine: function(ctx, p1, p2, dashedLength) {
+                var s = this.calcDistance(p1, p2);
+                f = Math.round(s / dashedLength) || 1,
+                    a = (p1.x - p2.x) / f,
+                    b = (p1.y - p2.y) / f;
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                for (var i = 0; i < f; i++) {
+                    ctx[i % 2 == 0 ? 'moveTo' : 'lineTo'](p1.x - i * a, p1.y - i * b);
+                }
+                ctx.stroke();
+                ctx.closePath();
+            },
+            /**
+             * [draw 画米字]
+             * @param  {[object]} ctx [context]
+             */
+            draw: function(ctx) {
+                var W = this.W,
+                    H = this.H;
+                this.drawDashedLine(ctx, {
+                    x: 0,
+                    y: 0
+                }, {
+                    x: W,
+                    y: H
+                }, this.dashedLength);
+                this.drawDashedLine(ctx, {
+                    x: W,
+                    y: 0
+                }, {
+                    x: 0,
+                    y: H
+                }, this.dashedLength);
+                this.drawDashedLine(ctx, {
+                    x: W / 2,
+                    y: 0
+                }, {
+                    x: W / 2,
+                    y: H
+                }, this.dashedLength);
+                this.drawDashedLine(ctx, {
+                    x: 0,
+                    y: H / 2
+                }, {
+                    x: W,
+                    y: H / 2
+                }, this.dashedLength);
+            },
+            init: function() {
+                this.ctx = createCanvas();
+                this.dom = $('define_dash');
+                this.W = WIDTH;
+                this.H = HEIGHT;
+                this.dashedLength = 5;
+                this.draw(this.ctx);
+                createCanvasImage(this.dom, this.ctx);
+
+            }
+        }).init();
+    })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>图片上传</title>
+    <style>
+    body {
+        padding: 20px 10px;
+    }
+    
+    ul {
+        margin: 0 auto;
+        padding-left: 1px;
+        padding-top: 1px;
+        list-style-type: none;
+    }
+    
+    ul li {
+        float: left;
+        width: 98px;
+        height: 98px;
+        margin-left: -1px;
+        margin-top: -1px;
+        border: 1px solid #f60;
+        background-position: center center;
+        background-repeat: no-repeat;
+        -webkit-background-size: cover;
+        background-size: cover;
+    }
+    </style>
+</head>
+
+<body>
+    <input type="file" id="files" accept="image/*/" multiple="true" name="" id="">
+    <hr>
+    <ul id="imgboxs" class="imgboxs">
+    </ul>
+    <script>
+    function UploadImg(wrap, options) {
+        this.wrap = (typeof wrap === 'string') ? document.getElementById(wrap) : wrap;
+        if (!this.wrap) return false;
+        options = options || {};
+        this.size = options.size || 500; // KB
+        this.sizeTip = options.sizeTip || '图片超限' + this.size + 'KB';
+        this.oncomplete = options.oncomplete || function() {}; // 上传完成
+        this.init();
+    }
+
+    /**
+     * [isImage 是否是图片]
+     * @param  {[Object]}  file [要上传的文件]
+     */
+    UploadImg.prototype.isImage = function(file) {
+        file = file || {};
+        return /^image/.test(file.type);
+    }
+
+    /**
+     * [sizeRight 图片大小是否符合要求]
+     * @param  {[Object]} file [要上传的文件]
+     * @return {[Boolean]}      [yes or no]
+     */
+    UploadImg.prototype.sizeRight = function(file) {
+        file = file || {};
+        if (file.size > this.size * 1000) {
+            alert(this.sizeTip);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * [change inputfile 输入的值改变时]
+     */
+    UploadImg.prototype.change = function() {
+        this.files = this.wrap.files;
+        for (var i = 0; i < this.files.length; i++) {
+            var file = this.files[i];
+            if (!this.isImage(file) || !this.sizeRight(file)) {
+                this.__status++;
+                this.__fail.push(file.name);
+                this.upcomplete(this.__succ, this.__fail);
+                continue;
+            }
+
+            this.readfile(file);
+        }
+    }
+
+    /**
+     * [readfile 读取文件]
+     * @param  {[Object]} file [要上传的文件]
+     */
+    UploadImg.prototype.readfile = function(file) {
+        var self = this;
+        if (!this.isImage(file)) return false;
+        var reader = new FileReader();
+        reader.onload = function() {
+            self.__succ.push(this.result);
+            self.__status++;
+            self.upcomplete();
+        }
+        reader.readAsDataURL(file);
+    }
+
+    /**
+     * [upcomplete 单个文件上传完成]
+     * @return {[type]} [description]
+     */
+    UploadImg.prototype.upcomplete = function() {
+        if (this.__status == this.files.length) {
+            this.oncomplete(this.__succ, this.__fail);
+        }
+    }
+
+    /**
+     * [initParam 初始化参数]
+     */
+    UploadImg.prototype.initParam = function() {
+        this.files = []; // 共接收到多少待上传文件
+        this.__status = 0; // 当前上传第几个
+        this.__fail = []; // 上传失败
+        this.__succ = []; // 上传成功
+    }
+
+    /**
+     * [init 初始化]
+     */
+    UploadImg.prototype.init = function() {
+        var self = this;
+        this.initParam();
+        this.wrap.addEventListener('change', function() {
+            self.initParam()
+            self.change();
+        })
+    }
+
+
+
+    ;
+    (function() {
+        var imgboxs = document.getElementById('imgboxs');
+        var createLi = function(src) {
+            var li = document.createElement('li');
+            li.style = 'background-image:url(' + src + ')';
+            imgboxs.appendChild(li);
+        };
+        var upload = new UploadImg('files', {
+            oncomplete: function(succ, faild) {
+                imgboxs.innerHTML = '';
+                for (var i = 0; i < succ.length; i++) {
+                    createLi(succ[i]);
+                }
+                if (faild.length != 0) {
+                    alert('上传有误' + faild.toString())
+                }
+            }
+        });
+    })();
+    </script>
+</body>
+
+</html>

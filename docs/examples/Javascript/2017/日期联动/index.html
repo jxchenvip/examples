@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>日期联动</title>
+    <style>
+    .selectbox {
+        width: 500px;
+        margin: 200px;
+    }
+    
+    .selectbox select {
+        width: 100px;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="selectbox">
+        <select name="" id="year"></select> 年
+        <select name="" id="month"></select> 月
+        <select name="" id="day"></select> 日
+    </div>
+    <script>
+    function DateSelect(year, month, day) {
+        this.year = (typeof year === 'string') ? document.getElementById(year) : year;
+        this.month = (typeof month === 'string') ? document.getElementById(month) : month;
+        this.day = (typeof day === 'string') ? document.getElementById(day) : day;
+
+        if (!this.year || !this.month || !this.day) return false;
+
+        this.init();
+    }
+
+    DateSelect.prototype.getOneMonthDays = function(year, month) {
+        var date = new Date();
+        year = year || date.getFullYear();
+        month = month || date.getMonth() + 1;
+        date.setFullYear(year);
+        date.setMonth(month);
+        date.setDate(0);
+        return date.getDate();
+    }
+
+    DateSelect.prototype.removeAllOptions = function(select) {
+        if (!select) return false;
+        select.options.length = 0;
+    }
+
+    DateSelect.prototype.setYear = function() {
+        var years = (new Date()).getFullYear() - 1970;
+
+        for (var i = 0; i <= years; i++) {
+            var text = 1970 + years - i;
+            var value = text;
+            this.year.add(new Option(text, value));
+        }
+    }
+
+    DateSelect.prototype.setMonth = function() {
+        var months = 12;
+
+        this.removeAllOptions(this.month);
+
+        for (var i = 0; i < months; i++) {
+            var text = i + 1;
+            var value = text;
+            this.month.add(new Option(text, value))
+        }
+    }
+
+
+    DateSelect.prototype.setDay = function() {
+        var years = this.year.value;
+        var months = this.month.value;
+        var days = this.getOneMonthDays(years, months);
+
+        this.removeAllOptions(this.day);
+
+        for (var i = 0; i < days; i++) {
+            var text = i + 1;
+            var value = text;
+            this.day.add(new Option(text, value));
+        }
+
+    }
+
+    DateSelect.prototype.addEvent = function(obj, evt, fn) {
+        if (obj.addEventListener) {
+            obj.addEventListener(evt, fn, false);
+        } else if (obj.attchEvent) {
+            obj.attchEvent('on' + evt, fn);
+        } else {
+            obj['on' + evt] = fn;
+        }
+    }
+
+    DateSelect.prototype.init = function() {
+        var self = this;
+        this.setYear();
+        this.setMonth();
+        this.setDay();
+
+        this.addEvent(this.year, 'change', function() {
+            self.setMonth();
+            self.setDay();
+        })
+
+        this.addEvent(this.month, 'change', function() {
+            self.setDay();
+        })
+    }
+
+    new DateSelect('year', 'month', 'day');
+    </script>
+</body>
+
+</html>

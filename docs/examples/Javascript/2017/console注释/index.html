@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    
+    #result {
+        word-break: break-all;
+    }
+    </style>
+</head>
+
+<body>
+    打开console.log查看
+    <script>
+    var canvas = document.createElement('canvas'),
+        context = canvas.getContext('2d'),
+        BODY = document.body,
+        FILL_TEXT = prompt("随便写点儿啥吧", "注释") || 'jxchen',
+        FONT_SIZE = 200,
+        PADDING = 20;
+
+    function resize() {
+        var box = document.createElement('div');
+        box.style.font = 'bold ' + FONT_SIZE + 'px/1 Arial';
+        box.style.padding = '0px ' + PADDING + 'px';
+        box.style.position = 'absolute';
+        box.style.whiteSpace = 'nowrap';
+        box.innerHTML = FILL_TEXT;
+        BODY.appendChild(box);
+        canvas.width = box.offsetWidth;
+        canvas.height = box.offsetHeight;
+        canvas.style.display = 'none';
+        BODY.removeChild(box);
+        box = null;
+    }
+
+    function fillTexts() {
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+        context.font = 'bold ' + FONT_SIZE + 'px/1 Arial';
+        context.fillText(FILL_TEXT, 0, canvas.height / 2);
+    }
+
+
+    function getBounds(stepX, stepY) {
+        var col = 0, // 列
+            row = 0; // 行
+        for (var i = 0; i < canvas.width; i += stepX) {
+            col++;
+        }
+        for (var i = 0; i < canvas.height; i += stepY) {
+            row++;
+        }
+        return {
+            col: col, // 行
+            row: row, // 列
+            width: stepX,
+            height: stepY
+        }
+    }
+
+    function renderString() {
+        var result = document.createElement('textarea');
+        var info = getBounds(6, 12);
+        result.value += '/*\n *\n';
+        for (var r = 0; r < info.row; r++) {
+            result.value += ' * ';
+            for (var c = 0; c < info.col; c++) {
+                var data = context.getImageData(c * info.width, r * info.height, info.width, info.height).data;
+                if (Math.max.apply(null, data) > 0) {
+                    // result.value += '·';
+                    result.value += '*';
+                } else {
+                    result.value += ' ';
+                }
+            }
+            result.value += '\n';
+        }
+        result.value += ' */';
+        console.log(result.value)
+    }
+
+    resize();
+    fillTexts();
+    renderString();
+    </script>
+</body>
+
+</html>

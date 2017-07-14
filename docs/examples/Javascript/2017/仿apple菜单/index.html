@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Document</title>
+    <style>
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    body {
+        background: url(IMG_3116.PNG);
+        -webkit-background-size: cover;
+        background-size: cover;
+    }
+    
+    .box {
+        width: 60px;
+        height: 60px;
+        z-index: 100;
+        position: fixed;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 20%;
+        cursor: pointer;
+    }
+    
+    .box::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        margin-left: -25%;
+        margin-top: -25%;
+        width: 50%;
+        height: 50%;
+        border-radius: 100%;
+        background-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2), 0 0 0 8px rgba(255, 255, 255, 0.1);
+    }
+    </style>
+</head>
+
+<body>
+    <div class="box"></div>
+    <script>
+    function QuickMenu(element) {
+        this.element = element;
+
+        this.MARGIN = 2; // 距离屏幕的值
+        this.down = false; // 鼠标是否按下
+        this.touch = {}; // 按下位置
+        this.mouse = {
+            x: this.MARGIN,
+            y: this.MARGIN
+        }; // 移动位置
+        this.rect = this.getBounds();
+
+        // event function
+        this.element.addEventListener('touchstart', this.start.bind(this), false);
+        this.element.addEventListener('touchmove', this.move.bind(this), false);
+        this.element.addEventListener('touchend', this.end.bind(this), false);
+
+
+        this.element.addEventListener('mousedown', this.start.bind(this), false);
+        document.addEventListener('mousemove', this.move.bind(this), false);
+        this.element.addEventListener('mouseup', this.end.bind(this), false);
+
+
+        window.onorientationchange = this.updateRect.bind(this);
+        window.addEventListener('resize', this.updateRect.bind(this), false);
+        console.log(this.mouse)
+
+        // set position
+        this.element.style.position = 'fixed';
+        this.setPosition();
+    }
+
+    QuickMenu.prototype = {
+        constructor: QuickMenu,
+        /** [updateRect 更新活动区域值] */
+        updateRect: function() {
+            this.rect = this.getBounds();
+            this.end();
+        },
+        /** [start 移动开始] */
+        start: function(e) {
+            e.preventDefault();
+            this.down = true;
+            var m = this.getMouse(e);
+            this.touch.x = m.x - this.element.offsetLeft;
+            this.touch.y = m.y - this.element.offsetTop;
+        },
+        /** [isInRect 鼠标是在可活动区域内] */
+        isInRect: function(x, y) {
+            if (x < this.rect.left || x > this.rect.right || y < this.rect.top || y > this.rect.bottom) {
+                return false;
+            } else {
+                return true;
+            }
+        },
+        /** [move 鼠标移动] */
+        move: function(e) {
+            e.preventDefault();
+            if (!this.down) return false;
+            var m = this.getMouse(e);
+            this.mouse.x = m.x - this.touch.x;
+            this.mouse.y = m.y - this.touch.y;
+            if (!this.isInRect(this.mouse.x, this.mouse.y)) {
+                this.end(e);
+            } else {
+                this.setPosition();
+            }
+        },
+        /** [getMouse 获取鼠标位置] */
+        getMouse: function(e) {
+            return {
+                x: e.touches ? e.touches[0].pageX : e.clientX,
+                y: e.touches ? e.touches[0].pageY : e.clientY
+            }
+        },
+        /** [getBounds 获取element移动边界] */
+        getBounds: function() {
+            return {
+                top: this.MARGIN,
+                left: this.MARGIN,
+                right: window.innerWidth - this.element.offsetWidth - this.MARGIN,
+                bottom: window.innerHeight - this.element.offsetHeight - this.MARGIN
+            }
+        },
+        /** [setPosition 设置element位置] */
+        setPosition: function() {
+            var left = Math.min(Math.max(this.mouse.x, this.rect.left), this.rect.right),
+                top = Math.min(Math.max(this.mouse.y, this.rect.top), this.rect.bottom);
+            this.element.style.left = left + 'px';
+            this.element.style.top = top + 'px';
+        },
+        /** [animate element运动] */
+        animate: function(target) {
+            var timer = setInterval(function() {
+                var speed = (target - this.mouse.x) / 8;
+                speed = speed > 0 ? Math.ceil(speed) : Math.floor(speed);
+                if (speed == 0) {
+                    this.mouse.x = target;
+                    clearInterval(timer);
+                    timer = null;
+                } else {
+                    this.mouse.x += speed;
+                    this.setPosition();
+                }
+            }.bind(this), 1000 / 60);
+            console.log(timer)
+        },
+        /** [end 移动结束] */
+        end: function(e) {
+            this.down = false;
+            if (this.mouse.x > window.innerWidth / 2) {
+                this.animate(this.rect.right);
+            } else {
+                this.animate(this.rect.left);
+            }
+        }
+    }
+    new QuickMenu(document.querySelector('.box'));
+    </script>
+</body>
+
+</html>

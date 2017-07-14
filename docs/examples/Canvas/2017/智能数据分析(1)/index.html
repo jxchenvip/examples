@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            text-align: center;
+        }
+        
+        canvas {
+            /*border: 1px solid #f60;*/
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="cvs" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <!--<canvas id="cvs1" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs2" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs3" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs4" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs5" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs6" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs7" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs8" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs9" style="width: 320px; height: 320px;" width="320" height="320"></canvas>
+    <canvas id="cvs10" style="width: 320px; height: 320px;" width="320" height="320"></canvas>-->
+    <script src="./hidpi-canvas.min.js"></script>
+    <script src="./requestFrameAnimate.js"></script>
+    <script src="./tween.js"></script>
+    <script>
+        function DashBoard(canvas, options) {
+            // canvas #id .class canvas 
+            if (!canvas) return false;
+            options = options || {};
+            this.cvs = typeof canvas == 'string' ? document.querySelector(canvas) : canvas;
+            // '热搜', '曲线1', '看好1', '关键字', '牛股', '搜索', '高开', '牛股', 
+            this.tags = options.tags || ['热搜', '曲线1', '看好1', '关键字', '牛股', '搜索', '高开', '牛股', '热搜', '曲线1', '看好1', '关键字', '牛股', '搜索', '高开', '牛股'];
+            this.value = options.value || this.rnd(1, 100) / 10; // 设置值
+            this.value = Math.min(Math.max(0, this.value), 10);
+            this.colors = options.colors || []; // 颜色 
+            this.noCanvasCallback = options.noCanvasCallback || function() {}; // 颜色
+
+        }
+        DashBoard.prototype = {
+            // 获取devicePixelRatio
+            getPixelRatio: function(context) {
+                var backingStore = context.backingStorePixelRatio ||
+                    context.webkitBackingStorePixelRatio ||
+                    context.mozBackingStorePixelRatio ||
+                    context.msBackingStorePixelRatio ||
+                    context.oBackingStorePixelRatio ||
+                    context.backingStorePixelRatio || 1;
+                return (window.devicePixelRatio || 1) / backingStore;
+            },
+            // 角度转弧度
+            d2a: function(n) {
+                return n * Math.PI / 180;
+            },
+            a2d: function(n) {
+                return n * 180 / Math.PI;
+            },
+            // 外圈
+            createCircelOuter: function() {
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.colors[0] || '#fcd1c4';
+                this.ctx.arc(0, 0, this.R1, this.d2a(this.sAngle), this.d2a(this.sAngle + this.eAngle));
+                this.ctx.stroke();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            // 创建刻度
+            createDegree: function() {
+                for (var i = 0; i < 11; i++) {
+                    if (i < 4) {
+                        this.ctx.fillStyle = this.colors[1] || '#afb3bc';
+                    }
+                    if (i >= 4 && i < 7) {
+                        this.ctx.fillStyle = this.colors[2] || '#e7b4b2';
+                    }
+
+                    if (i >= 7) {
+                        this.ctx.fillStyle = this.colors[3] || '#e60e1e';
+                    }
+                    var _R = 225 + i * 270 / 10;
+                    var _Y = -this.IY + 4;
+                    for (var j = 0; j < 3; j++) {
+                        if (i == 10) continue;
+                        this.ctx.save();
+                        this.ctx.translate(this.center.x, this.center.y);
+                        this.ctx.rotate(this.d2a(_R + j * 9));
+                        this.ctx.beginPath();
+                        this.ctx.rect(-1, _Y, 2, 8);
+                        this.ctx.fill();
+                        this.ctx.closePath();
+                        this.ctx.restore();
+                    }
+
+                    this.ctx.save();
+                    this.ctx.translate(this.center.x, this.center.y);
+                    this.ctx.rotate(this.d2a(_R));
+                    this.ctx.beginPath();
+                    this.ctx.rect(-2, _Y, 4, 12);
+                    this.ctx.fill();
+                    this.ctx.closePath();
+                    this.ctx.restore();
+
+                    // 创建文字
+                    var _r = -this.IY + 25;
+                    var _TR = this.d2a(-45 + 27 * i);
+                    this.ctx.save();
+                    this.ctx.translate(this.center.x, this.center.y);
+                    this.ctx.font = '16px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(i, Math.cos(_TR) * _r, Math.sin(_TR) * _r);
+                    this.ctx.restore();
+                }
+            },
+            // 内圈阴影
+            createShadow: function() {
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.lineWidth = 10;
+                this.ctx.beginPath();
+                this.ctx.lineCap = 'round';
+                this.ctx.strokeStyle = this.colors[4] || '#d1d2d5';
+                this.ctx.arc(0, 6, this.R3, this.d2a(this.sAngle), this.d2a(this.sAngle + this.eAngle));
+                this.ctx.stroke();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            // 内圈
+            createCircelIn: function() {
+                this.ctx.save();
+                this.ctx.lineWidth = 10;
+                this.ctx.translate(this.center.x, this.center.y);
+
+                this.ctx.beginPath();
+                this.ctx.lineCap = 'round';
+                this.ctx.strokeStyle = this.colors[5] || '#3b4258';
+                this.ctx.arc(0, 0, this.R3, this.d2a(this.sAngle), this.d2a(this.sAngle + 90));
+                this.ctx.stroke();
+                this.ctx.closePath();
+
+                this.ctx.beginPath();
+                this.ctx.lineCap = 'round';
+                this.ctx.strokeStyle = this.colors[6] || '#e60e1e';
+                this.ctx.arc(0, 0, this.R3, this.d2a(this.sAngle + 180), this.d2a(this.sAngle + this.eAngle));
+                this.ctx.stroke();
+                this.ctx.closePath();
+
+                this.ctx.beginPath();
+                this.ctx.lineCap = 'square';
+                this.ctx.strokeStyle = this.colors[7] || '#f75e46';
+                this.ctx.arc(0, 0, this.R3, this.d2a(this.sAngle + 88.5), this.d2a(this.sAngle + 191.5));
+                this.ctx.stroke();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            // 指针下的圈环
+            createHandBottom: function() {
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.colors[8] || '#3b4258';
+                this.ctx.arc(0, 0, 15, this.d2a(0), this.d2a(360));
+                this.ctx.stroke();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            createGradientBg: function() {
+                var W = this.CW * 0.8;
+                var H = this.CH * 0.8;
+                var W2 = W / 2;
+                var H2 = H / 2;
+                var N = this.value;
+                var _N = 0;
+                var grd = this.ctx.createLinearGradient(-400, -400, 800, 800);
+                grd.addColorStop(0, "#b2d2f4");
+                grd.addColorStop(1, "rgba(255, 255, 255, 0)");
+                // grd.addColorStop(1, "#f60");
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                // this.ctx.rotate(this.d2a(90+this.getNumber() * 270 / 10));
+                // this.ctx.rotate(this.d2a(135 + this.tempNum));
+                // this.ctx.globalAlpha = this.getNumber() / 10;
+                this.ctx.beginPath();
+                this.ctx.fillStyle = grd;
+                this.ctx.moveTo(0, 0);
+                this.ctx.arc(0, 0, W / 2 / this.ratio, this.d2a(0), this.d2a(360));
+                // this.ctx.rect(0, 0, 200, -100);
+                this.ctx.moveTo(0, 0);
+
+                this.ctx.fill();
+                this.ctx.closePath();
+                this.ctx.restore();
+
+                // var grd = this.ctx.createLinearGradient(0, 0, -100, -100);
+                // grd.addColorStop(0, "rgba(255, 255, 255, 0)");
+                // grd.addColorStop(1, "rgba(0, 0, 0, 1)");
+
+                // this.ctx.save();
+                // this.ctx.translate(this.center.x, this.center.y);
+                // this.ctx.rotate(this.d2a(this.getNumber() * 270 / 10));
+                // // this.ctx.globalAlpha = this.getNumber() / 10;
+                // this.ctx.beginPath();
+                // this.ctx.fillStyle = grd;
+                // this.ctx.moveTo(0, 0);
+                // this.ctx.arc(0, 0, W / 2 / this.ratio, this.d2a(this.sAngle - this.getNumber() * 270 / 50), this.d2a(this.sAngle + 5));
+                // this.ctx.moveTo(0, 0);
+                // // this.ctx.rect(0, 0, -100, -100);
+                // // this.ctx.stroke();
+                // this.ctx.globalCompositeOperation = "destination-in";
+                // this.ctx.fill();
+                // this.ctx.closePath();
+                // this.ctx.restore();
+            },
+            // 指针
+            createHand: function() {
+                var sAngle = -135;
+                var start = 0;
+                var eAngle = this.setNumber(this.value);
+                var duration = this.value * 10 * 150 / 100;
+                console.log(duration)
+                this.tempNum = Tween.Quad.easeOut(this.ANIMAT.hand++, start, eAngle - start, duration);
+                if (this.ANIMAT.hand > duration) {
+                    this.update = false;
+                    this.tempNum = eAngle;
+                }
+
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.rotate(this.d2a(sAngle + this.tempNum));
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.colors[9] || '#3b4258';
+                this.ctx.fillStyle = this.colors[10] || '#3b4258';
+                this.ctx.moveTo(0, 0);
+                this.ctx.lineTo(0, -this.IY + 4);
+                this.ctx.lineTo(3, 0);
+                this.ctx.quadraticCurveTo(0, 5, -3, 0);
+                this.ctx.lineTo(0, -this.IY + 4);
+                this.ctx.stroke();
+                this.ctx.fill();
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            // 设置Number
+            setNumber: function(n) {
+                n = Math.min(Math.max(0, n), 10);
+                return n * 270 / 10;
+            },
+            // 获取Number
+            getNumber: function() {
+                this.tempNum = this.tempNum || 0;
+                return (this.tempNum / 270 * 10).toFixed(1);
+            },
+            /** 创建进度文字 */
+            createBigText: function() {
+                var N = this.getNumber();
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.font = this.FS + 'px Arial';
+                this.ctx.fillStyle = this.colors[11] || '#f75e46';
+                this.ctx.textAlign = 'center';
+                this.ctx.shadowBlur = 2;
+                this.ctx.shadowOffsetY = 5;
+                this.ctx.shadowColor = this.colors[12] || "rgba(247, 94, 70, 0.2)";
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(N, 0, this.FY);
+                this.ctx.restore();
+            },
+            rnd: function(iMin, iMax) {
+                return Math.floor(Math.random() * (iMax - iMin)) + iMin;
+            },
+            sampleDirection: function(index, rnd) {
+                var R = this.R3 * (this.rnd(200, 450) / 1000 + index / this.tags.length / 2.5);
+                // var R = this.R3 * this.rnd(150, 650) / 1000;
+                var theta = index + rnd;
+                return {
+                    x: Math.cos(this.a2d(theta)) * R,
+                    y: Math.sin(this.a2d(theta)) * R
+                };
+            },
+            // 设置tags 标签信息
+            setTagsInfor: function() {
+                var rnd = this.rnd(0, 100) * 0.5;
+                this.tags.forEach(function(text, index) {
+                    var fontSize = this.rnd(12, 20);
+                    var cr = this.rnd(0, 255); // rgba : r
+                    var cg = this.rnd(0, 255); // rgba : g
+                    var cb = this.rnd(0, 255); // rgba : b
+                    var ca = this.rnd(60, 100) / 100; // rgba : a
+                    var scale = this.rnd(75, 110) / 100;
+                    this.ctx.font = fontSize + 'px Microsoft YaHei'; // 为了计算字体的宽度
+                    var radius = this.ctx.measureText(text).width / 2;
+                    var d = this.sampleDirection(index, rnd); // 简单的随机方向
+                    this.tagsInfor.push({
+                        x: d.x, // x 轴
+                        y: d.y, // y 轴
+                        radius: d.radius, // 文字半径
+                        text: text, // 文字
+                        scale: scale, // 缩放
+                        color: 'rgba(' + cr + ', ' + cg + ', ' + cb + ', ' + ca + ')', // 字体颜色
+                        fontSize: fontSize // 字体大小
+                    });
+                }.bind(this));
+            },
+            // 获取所有tags 标签信息
+            getTagsInfor: function(t) {
+                var R = this.R3 * 0.7;
+                if (this.DEBUG) {
+                    this.ctx.save();
+                    this.ctx.translate(this.center.x, this.center.y);
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, R, 0, this.d2a(360));
+                    this.ctx.stroke();
+                    this.ctx.closePath();
+                    this.ctx.restore();
+                }
+                this.tagsInfor.forEach(function(item, index) {
+                    this.putTags(item);
+                }.bind(this));
+            },
+            putTags: function(p) {
+                var N = this.getNumber() / 10;
+                this.ctx.save();
+                this.ctx.translate(this.center.x, this.center.y);
+                this.ctx.scale(p.scale, p.scale);
+                this.ctx.font = '16px Microsoft YaHei';
+                this.ctx.fillStyle = p.color;
+                this.ctx.beginPath();
+                if (this.DEBUG) {
+                    this.ctx.arc(p.x, p.y, p.radius, 0, this.d2a(360));
+                    this.ctx.stroke();
+                }
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(p.text, p.x, p.y);
+                this.ctx.closePath();
+                this.ctx.restore();
+            },
+            loop: function() {
+                var that = this;
+                (function loop() {
+                    if (that.update) {
+                        that.render();
+                    }
+                    requestAnimationFrame(loop);
+                }());
+            },
+            createMask: function() {
+                var sAngle = 135;
+                var last = 0;
+                var N = this.getNumber() * 10;
+                console.log(N)
+
+                for (var i = 0; i < (N + 1); i++) {
+                    this.ctx.save();
+                    this.ctx.translate(this.center.x, this.center.y);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.arc(0, 0, this.R3, this.d2a(sAngle + last), this.d2a(sAngle + 2.7 * i), false);
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+                    last = 2.7 * i;
+                    this.ctx.fillStyle = 'rgba(141, 192, 242, ' + (i / N / 3) + ')';
+                    this.ctx.fill();
+                    this.ctx.closePath();
+                    this.ctx.restore();
+                }
+            },
+            render: function() {
+                this.ctx.clearRect(0, 0, this.CW, this.CH);
+                // this.createGradientBg();
+                this.getTagsInfor();
+                this.createCircelOuter();
+                this.createMask();
+                this.createShadow();
+                this.createDegree();
+                this.createCircelIn();
+                this.createHandBottom();
+                this.createHand();
+                this.createBigText();
+            },
+            init: function() {
+                if (!this.cvs) return false;
+                if (!this.cvs.getContext) {
+                    this.noCanvasCallback();
+                    return false;
+                }
+
+                this.ctx = this.cvs.getContext('2d');
+                this.ratio = this.getPixelRatio(this.ctx);
+                this.CW = this.cvs.width;
+                this.CH = this.cvs.height;
+                this.update = true;
+                this.sAngle = 130;
+                this.eAngle = 280;
+                this.center = {
+                    x: this.CW / 2 / this.ratio,
+                    y: this.CH / 2 / this.ratio
+                };
+                this.R1 = this.CW / 2 * 0.95 / this.ratio;
+                this.IY = this.CH / 2 * 0.8 / this.ratio;
+                this.R3 = this.CW / 2 * 0.8 / this.ratio; // 内圈半径
+                this.FY = this.CH / 2 * 0.65 / this.ratio; // 进度字体Y轴
+                this.FS = this.CW * 0.2 / this.ratio; // 进度字体大小
+                this.ANIMAT = {
+                    outer: 0, // 外圈
+                    hand: 0 // 指针
+                };
+                this.DEBUG = false;
+                this.tempNum = 0;
+                this.tagsInfor = []; // 用于记录tags标签信息
+                this.setTagsInfor();
+                this.loop();
+
+                this.temp = 0;
+            }
+        }
+
+
+        var dashBoard1 = new DashBoard('#cvs', {
+            value: 100
+        });
+        dashBoard1.init();
+        // var dashBoard2 = new DashBoard('#cvs1', {
+        //     value: 2
+        // });
+        // dashBoard2.init();
+        // var dashBoard3 = new DashBoard('#cvs2', {
+        //     value: 3
+        // });
+        // dashBoard3.init();
+        // var dashBoard4 = new DashBoard('#cvs3', {
+        //     value: 4
+        // });
+        // dashBoard4.init();
+        // var dashBoard5 = new DashBoard('#cvs4', {
+        //     value: 5
+        // });
+        // dashBoard5.init();
+        // var dashBoard6 = new DashBoard('#cvs5', {
+        //     value: 6
+        // });
+        // dashBoard6.init();
+        // var dashBoard7 = new DashBoard('#cvs6', {
+        //     value: 7
+        // });
+        // dashBoard7.init();
+        // var dashBoard8 = new DashBoard('#cvs7', {
+        //     value: 8
+        // });
+        // dashBoard8.init();
+        // var dashBoard9 = new DashBoard('#cvs8', {
+        //     value: 9
+        // });
+        // dashBoard9.init();
+        // var dashBoard = new DashBoard('#cvs9', {
+        //     value: 10
+        // });
+        // dashBoard.init();
+    </script>
+</body>
+
+</html>

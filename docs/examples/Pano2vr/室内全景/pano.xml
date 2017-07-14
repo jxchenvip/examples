@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<panorama id="node1">
+  <input width="1024" leveltilesize="510" levelingpitch="0" levelingroll="0" leveltileurl="tiles/2294472375_24a3b8ef46_o/cf_%c/l_%l/c_%x/tile_%y.jpg" height="1024" levelbiashidpi="0.400" levelbias="0.400" overlap="1">
+    <level width="1024" predecode="0" preload="0" height="1024"/>
+    <level width="512" predecode="0" preload="0" height="512"/>
+    <level width="256" predecode="1" preload="1" height="256"/>
+    <preview strip="1" color="0x808080"/>
+  </input>
+  <view pannorth="0" fovmode="0">
+    <start fov="70" tilt="0" pan="0"/>
+    <min fov="5" tilt="-90" pan="0"/>
+    <max fov="120" tilt="90" pan="360"/>
+  </view>
+  <userdata title="" description="" author="" source="" longitude="" copyright="" comment="" tags="Pano2VR5" datetime="2012:04:02 12:57:34" info="" latitude=""/>
+  <hotspots width="180" wordwrap="1" height="20">
+    <label textcolor="0x000000" borderalpha="1" borderradius="1" backgroundcolor="0xffffff" bordercolor="0x000000" width="180" background="1" wordwrap="1" textalpha="1" enabled="1" height="20" border="1" backgroundalpha="1"/>
+    <polystyle borderalpha="1" handcursor="1" backgroundcolor="0x0000ff" bordercolor="0x0000ff" mode="0" backgroundalpha="0.2509803921568627"/>
+  </hotspots>
+  <media/>
+  <transition zoomoutpause="1" zoomin="0" zoomout="0" zoomfov="20" zoomspeed="2" blendcolor="0x000000" blendtime="1" type="crossdissolve" enabled="0" softedge="0"/>
+  <control sensitivity="8" invertcontrol="1" lockedmouse="0" lockedkeyboard="0" speedwheel="1" lockedwheel="0" lockedkeyboardzoom="0" invertwheel="0" dblclickfullscreen="0" simulatemass="1" hideabout="0" contextfullscreen="0"/>
+</panorama>
