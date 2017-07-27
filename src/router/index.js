@@ -66,9 +66,10 @@ Object.keys(routes.category).forEach(function(item) {
         name: item,
         component: ListModel
     }, {
-        path: `/${item}/Detail`,
+        path: `/${item}/Detail/`,
+        name: `/${item}/Detail`,
         component: Detail
     });
 })
-console.log(routerConfig)
+
 export default new Router(routerConfig)

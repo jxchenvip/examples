@@ -60,7 +60,9 @@ export default {
                 path: `/${item.category}/Detail`,
                 query: {
                     link: `/${PATH}/examples/${item.link}`
-                }
+                },
+                name: `/${item.category}/Detail`,
+                params: item
             });
         },
         showLists() {
@@ -73,6 +75,10 @@ export default {
                 }
                 return cat === this.categoryUpper;
             });
+
+            newDatas.sort(function(a, b) {
+                return b.birthtime - a.birthtime;
+            })
 
             newDatas.forEach((item, index) => {
                 var timer = setTimeout(() => {

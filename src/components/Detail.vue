@@ -30,7 +30,6 @@ export default {
     },
     mounted() {
         this.iframeHeight = iframeHeight - 4;
-        console.log(this.iframeHeight)
     },
     methods: {
         iframeLoad() {
